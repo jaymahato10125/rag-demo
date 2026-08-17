@@ -1,12 +1,17 @@
+import os
 from dotenv import load_dotenv
 from pathlib import Path
-from langchain_classic.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_qdrant import QdrantVectorStore
 
 # Load environment variables from .env file
 load_dotenv()
+
+openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+if not openrouter_api_key:
+    raise RuntimeError("OPENROUTER_API_KEY is not set")
 
 pdf_path = Path(__file__).parent / "data" / "sample.pdf"
 
@@ -23,7 +28,9 @@ chunks = test_splitter.split_documents(documents=docs)
 
 #Embedding the chunks using OpenAIEmbeddings
 embedding_model = OpenAIEmbeddings(
-    model="text-embedding-3-large"
+    model="openai/text-embedding-3-large",
+    api_key=openrouter_api_key,
+    base_url="https://openrouter.ai/api/v1",
 )
 
 # Create a Qdrant Vector Store
