@@ -1,6 +1,6 @@
-# PDF RAG Indexer
+# PDF RAG API
 
-This project loads a local PDF, splits it into chunks, creates embeddings through OpenRouter, and stores the vectors in a local Qdrant database.
+This project loads a local PDF, splits it into chunks, creates embeddings through OpenRouter, stores the vectors in Qdrant, and exposes a question-answering API.
 
 ## Requirements
 
@@ -32,7 +32,7 @@ app/data/sample.pdf
 
 The local data directory is ignored by Git.
 
-## Run
+## Index the PDF
 
 Start Qdrant:
 
@@ -54,10 +54,41 @@ When indexing finishes, the script prints:
 Vector store created and documents embedded successfully.
 ```
 
-Stop Qdrant when finished:
+## Start the API
+
+Run the API from the `app` directory:
 
 ```bash
-docker compose down
+cd app
+uvicorn main:app --reload
+```
+
+The API and interactive Swagger documentation are available at:
+
+- API: `http://127.0.0.1:8000`
+- Swagger UI: `http://127.0.0.1:8000/docs`
+
+The `/query/` endpoint accepts a question as a query parameter:
+
+```bash
+curl -X POST \
+  'http://127.0.0.1:8000/query/?question=What are the phases of the Node.js event loop?' \
+  -H 'accept: application/json'
+```
+
+The endpoint searches the indexed document, sends the retrieved context to the `openai/gpt-4o-mini` model through OpenRouter, and returns an answer with source pages:
+
+```json
+{
+  "question": "What are the phases of the Node.js event loop?",
+  "answer": "...",
+  "sources": [
+    {
+      "page": "2",
+      "content": "..."
+    }
+  ]
+}
 ```
 
 ## Project structure
@@ -66,12 +97,25 @@ docker compose down
 .
 ├── app/
 │   ├── data/          # Local PDFs; ignored by Git
-│   └── index.py       # PDF loading, chunking, embedding, and indexing
+│   ├── index.py       # PDF loading, chunking, embedding, and indexing
+│   ├── main.py        # FastAPI application
+│   └── routes/
+│       └── query.py   # Retrieval and question-answering endpoint
 ├── docker-compose.yml # Local Qdrant service
 ├── requirements.txt   # Python dependencies
 └── .env               # Local API key; ignored by Git
 ```
 
-## Current scope
+## Models and services
 
-The project currently handles document ingestion and vector storage. A search or question-answering endpoint has not been added yet.
+- Embeddings: `openai/text-embedding-3-large` through OpenRouter
+- Answer generation: `openai/gpt-4o-mini` through OpenRouter
+- Vector database: Qdrant at `http://localhost:6333`
+
+Run the indexing step before starting a query, otherwise the `sample_collection` collection will not exist.
+
+When you are finished, stop Qdrant:
+
+```bash
+docker compose down
+```

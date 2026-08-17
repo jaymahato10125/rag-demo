@@ -32,4 +32,3 @@ qdrant_storage/
 .vscode/
 .DS_Store
 Thumbs.db
-sample.pdf
